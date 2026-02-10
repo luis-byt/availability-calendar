@@ -1,0 +1,19 @@
+{
+  "name": "availability-calendar",
+  "version": "1.0.0",
+  "main": "availability-calendar.js",
+  "scripts": {
+    "build:js": "terser availability-calendar.js -c -m -o dist/availability-calendar.min.js",
+    "build:css": "cleancss -o dist/availability-calendar.min.css availability-calendar.css",
+    "build": "mkdir -p dist && npm run build:js && npm run build:css"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "description": "",
+  "devDependencies": {
+    "clean-css-cli": "^5.6.3",
+    "terser": "^5.46.0"
+  }
+}

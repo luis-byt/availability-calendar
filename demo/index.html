@@ -1,0 +1,263 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Availability Calendar Demo</title>
+
+  <!-- Ajusta la ruta si tus assets están en otro sitio -->
+  <link rel="stylesheet" href="../availability-calendar.css" />
+
+  <style>
+    body { margin: 0; background: #f6f7f9; }
+    .wrap {
+      max-width: 980px; margin: 0 auto; padding: 20px;
+      font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
+    }
+    .row { display: grid; grid-template-columns: 1fr 520px; gap: 16px; align-items: start; }
+    @media (max-width: 900px) { .row { grid-template-columns: 1fr; } }
+    .card {
+      background: #fff; border: 1px solid #e5e7eb; border-radius: 12px; padding: 14px;
+    }
+    .h1 { font-size: 18px; font-weight: 800; margin: 0 0 10px; }
+    .muted { color: #6b7280; font-size: 13px; }
+    .controls { display: grid; gap: 10px; }
+    .grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+    label { font-size: 12px; color: #374151; font-weight: 700; display: block; margin-bottom: 4px; }
+    input, select {
+      width: 100%; padding: 10px 10px; border: 1px solid #e5e7eb; border-radius: 10px;
+      font-size: 14px; outline: none;
+    }
+    input:focus { border-color: #2563eb; box-shadow: 0 0 0 2px rgba(37,99,235,.14); }
+    .btn {
+      padding: 10px 12px; border: 1px solid #e5e7eb; background: #111827; color: #fff;
+      border-radius: 10px; cursor: pointer; font-weight: 800;
+    }
+    .btn.secondary { background: #fff; color: #111827; }
+    .btn:disabled { opacity: .55; cursor: not-allowed; }
+    .status { font-size: 13px; }
+    pre {
+      white-space: pre-wrap; word-break: break-word; margin: 0;
+      background: #0b1020; color: #d1d5db; padding: 12px; border-radius: 12px; overflow: auto;
+      border: 1px solid #111827;
+    }
+    .pill {
+      display: inline-block; padding: 4px 8px; border-radius: 999px; font-size: 12px;
+      background: rgba(37,99,235,.12); color: #1d4ed8; font-weight: 800;
+    }
+    .rowBtns { display:flex; gap:10px; flex-wrap:wrap; }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <div class="card" style="margin-bottom:16px;">
+      <div class="h1">Availability Calendar — Demo</div>
+      <div class="muted">
+        Demo de la librería. Puedes usar data mock o consumir tu API:
+        <span class="pill">/api/v1/availability/?type_id=&combination_id=</span>
+      </div>
+    </div>
+
+    <div class="row">
+      <!-- Panel izquierdo -->
+      <div class="card">
+        <div class="h1">Controles</div>
+
+        <div class="controls">
+          <div>
+            <label>Modo</label>
+            <select id="mode">
+              <option value="mock">Mock (sin API)</option>
+              <option value="api">API (fetch)</option>
+            </select>
+            <div class="muted" style="margin-top:6px;">
+              Mock genera disponibilidad para los próximos 30 días. API llama a tu endpoint real.
+            </div>
+          </div>
+
+          <div id="apiFields" style="display:none;">
+            <div>
+              <label>API Base URL</label>
+              <input id="apiBase" type="text" value="http://localhost:8000" />
+              <div class="muted" style="margin-top:6px;">
+                Ej: http://localhost:8000 o https://tu-dominio.com
+              </div>
+            </div>
+
+            <div class="grid2">
+              <div>
+                <label>type_id</label>
+                <input id="typeId" type="number" value="3" min="1" />
+              </div>
+              <div>
+                <label>combination_id</label>
+                <input id="comboId" type="number" value="9" min="1" />
+              </div>
+            </div>
+
+            <div class="grid2">
+              <div>
+                <label>from (YYYY-MM-DD)</label>
+                <input id="dateFrom" type="text" placeholder="2026-02-10" />
+              </div>
+              <div>
+                <label>to (YYYY-MM-DD)</label>
+                <input id="dateTo" type="text" placeholder="2026-03-10" />
+              </div>
+            </div>
+          </div>
+
+          <div class="rowBtns">
+            <button class="btn" id="btnLoad">Cargar disponibilidad</button>
+            <button class="btn secondary" id="btnReset">Reset</button>
+          </div>
+
+          <div class="status" id="status"></div>
+
+          <div>
+            <div class="h1" style="margin-top:8px;">Slot seleccionado</div>
+            <pre id="selected">{}</pre>
+          </div>
+
+          <div>
+            <div class="h1" style="margin-top:8px;">Última respuesta data (resumen)</div>
+            <pre id="lastData">{}</pre>
+          </div>
+        </div>
+      </div>
+
+      <!-- Calendario -->
+      <div class="card">
+        <div class="h1">Calendario</div>
+        <div id="calendar"></div>
+      </div>
+    </div>
+  </div>
+
+  <script src="../availability-calendar.js"></script>
+  <script>
+    const $ = (id) => document.getElementById(id);
+
+    let cal = null;
+
+    function setStatus(msg, isError=false) {
+      $("status").textContent = msg || "";
+      $("status").style.color = isError ? "#b91c1c" : "#111827";
+    }
+
+    function pretty(obj) {
+      return JSON.stringify(obj, null, 2);
+    }
+
+    // Mock generator: crea days[] con algunos días disponibles y slots cada 15 mins
+    function mockAvailability(maxDays=30) {
+      const now = new Date();
+      const days = [];
+      for (let i=0; i<=maxDays; i++) {
+        const d = new Date(now);
+        d.setDate(d.getDate()+i);
+        const dateKey = d.toISOString().slice(0,10);
+
+        // ejemplo: disponibilidad solo algunos días (para que se vea el verde)
+        const available = (i % 2 === 0) || (i % 5 === 0);
+        const slots = [];
+
+        if (available) {
+          // genera 8 slots: 09:00 - 11:00 cada 15 mins (duración 30 mins)
+          for (let m=0; m<8; m++) {
+            const start = new Date(d.getFullYear(), d.getMonth(), d.getDate(), 9, m*15, 0);
+            const stop  = new Date(d.getFullYear(), d.getMonth(), d.getDate(), 9, m*15+30, 0);
+            slots.push({
+              start: `${dateKey} ${String(start.getHours()).padStart(2,"0")}:${String(start.getMinutes()).padStart(2,"0")}:00`,
+              stop:  `${dateKey} ${String(stop.getHours()).padStart(2,"0")}:${String(stop.getMinutes()).padStart(2,"0")}:00`
+            });
+          }
+        }
+
+        days.push({ date: dateKey, slots });
+      }
+
+      return {
+        type_id: 3,
+        combination_id: 9,
+        duration_minutes: 30,
+        step_minutes: 15,
+        days
+      };
+    }
+
+    async function fetchAvailability() {
+      const base = $("apiBase").value.replace(/\/+$/, "");
+      const typeId = $("typeId").value;
+      const comboId = $("comboId").value;
+      const from = $("dateFrom").value.trim();
+      const to = $("dateTo").value.trim();
+
+      let url = `${base}/api/v1/availability/?type_id=${encodeURIComponent(typeId)}&combination_id=${encodeURIComponent(comboId)}`;
+      if (from) url += `&from=${encodeURIComponent(from)}`;
+      if (to) url += `&to=${encodeURIComponent(to)}`;
+
+      const res = await fetch(url, { headers: { "Accept": "application/json" } });
+      if (!res.ok) {
+        const text = await res.text();
+        throw new Error(`HTTP ${res.status}: ${text}`);
+      }
+      return await res.json();
+    }
+
+    function mountCalendar(data) {
+      if (cal) cal.destroy();
+
+      cal = new AvailabilityCalendar("#calendar", {
+        data,
+        maxDays: 30,
+        locale: "es-ES",
+        onSlotSelect: ({ date, slot }) => {
+          $("selected").textContent = pretty({ date, slot });
+        }
+      });
+
+      // resumen de data
+      const dayCount = (data?.days || []).length;
+      const availDays = (data?.days || []).filter(d => (d.slots || []).length).length;
+      $("lastData").textContent = pretty({ dayCount, availDays, sampleDay: data?.days?.find(d => (d.slots||[]).length) || null });
+    }
+
+    function applyModeUI() {
+      const mode = $("mode").value;
+      $("apiFields").style.display = mode === "api" ? "block" : "none";
+      setStatus("");
+    }
+
+    $("mode").addEventListener("change", applyModeUI);
+
+    $("btnReset").addEventListener("click", () => {
+      $("selected").textContent = "{}";
+      $("lastData").textContent = "{}";
+      setStatus("Reset OK");
+      mountCalendar({ days: [] });
+    });
+
+    $("btnLoad").addEventListener("click", async () => {
+      try {
+        setStatus("Cargando...");
+        const mode = $("mode").value;
+
+        let data;
+        if (mode === "mock") data = mockAvailability(30);
+        else data = await fetchAvailability();
+
+        mountCalendar(data);
+        setStatus("OK: disponibilidad cargada");
+      } catch (e) {
+        console.error(e);
+        setStatus(e.message || "Error cargando disponibilidad", true);
+      }
+    });
+
+    // init
+    applyModeUI();
+    mountCalendar(mockAvailability(30));
+  </script>
+</body>
+</html>
