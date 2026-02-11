@@ -163,52 +163,56 @@
       _renderGrid() {
         const daysEl = this._root.querySelector(".ac__days");
         daysEl.innerHTML = "";
-  
+      
         const monthStart = this._monthStart(this._currentMonth);
         const monthEnd = this._monthEnd(this._currentMonth);
-  
+      
         const gridStart = this._startOfWeek(monthStart, this.opts.weekStartsOn);
         const gridEnd = this._endOfWeek(monthEnd, this.opts.weekStartsOn);
-  
+      
         let cursor = new Date(gridStart);
-  
+      
         while (cursor <= gridEnd) {
-          const inMonth = cursor.getMonth() === this._currentMonth.getMonth();
-          const dayKey = toISODateKey(cursor);
-  
-          const disabled = cursor < this._rangeStart || cursor > this._rangeEnd;
+          // ✅ CLAVE: congelar la fecha de esta celda (NO usar cursor directo en handlers)
+          const cellDate = new Date(cursor);
+          const dayKey = toISODateKey(cellDate);
+      
+          const inMonth = cellDate.getMonth() === this._currentMonth.getMonth();
+          const disabled = cellDate < this._rangeStart || cellDate > this._rangeEnd;
+      
           const slots = this._dataMap.get(dayKey) || [];
           const hasSlots = slots.length > 0;
-  
+      
           const cell = document.createElement("div");
           cell.className = "ac__day";
+      
           if (!inMonth) cell.classList.add("ac__day--muted");
           if (disabled) cell.classList.add("ac__day--disabled");
-          if (sameDay(cursor, this._today)) cell.classList.add("ac__day--today");
+          if (sameDay(cellDate, this._today)) cell.classList.add("ac__day--today");
           if (hasSlots && !disabled) cell.classList.add("ac__day--available");
           if (this._selectedDateKey === dayKey) cell.classList.add("ac__day--selected");
-  
+      
           cell.innerHTML = `
-            <div class="ac__dayNum">${cursor.getDate()}</div>
+            <div class="ac__dayNum">${cellDate.getDate()}</div>
             ${hasSlots && !disabled ? `<div class="ac__badge">${slots.length}</div>` : `<div></div>`}
           `;
-  
+      
           if (!disabled) {
             cell.addEventListener("click", () => {
               this._selectedDateKey = dayKey;
               this._selectedSlotStart = null;
-  
-              if (cursor.getMonth() !== this._currentMonth.getMonth()) {
-                this._currentMonth = new Date(cursor.getFullYear(), cursor.getMonth(), 1);
-              }
+      
+              // ✅ IMPORTANTE: NO cambiar de mes al hacer click
               this.render();
             });
           }
-  
+      
           daysEl.appendChild(cell);
+      
+          // avanzar cursor
           cursor.setDate(cursor.getDate() + 1);
         }
-      }
+      }      
   
       _renderSlotsPanel() {
         const dateEl = this._root.querySelector(".ac__slotsDate");

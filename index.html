@@ -4,6 +4,10 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
   <title>Availability Calendar Demo</title>
+  <link rel="icon" href="./assets/img/favicon/favicon.ico" sizes="any">
+  <link rel="icon" href="./assets/img/favicon/favicon.svg" type="image/svg+xml">
+  <link rel="apple-touch-icon" href="./assets/img/favicon/apple-touch-icon.png">
+
 
   <!-- Ajusta la ruta si tus assets están en otro sitio -->
   <link rel="stylesheet" href="./availability-calendar.css" />
@@ -78,7 +82,7 @@
           <div id="apiFields" style="display:none;">
             <div>
               <label>API Base URL</label>
-              <input id="apiBase" type="text" value="http://localhost:8000" />
+              <input id="apiBase" type="text" value="http://localhost:8000" style="width: 95%;" />
               <div class="muted" style="margin-top:6px;">
                 Ej: http://localhost:8000 o https://tu-dominio.com
               </div>
@@ -87,22 +91,22 @@
             <div class="grid2">
               <div>
                 <label>type_id</label>
-                <input id="typeId" type="number" value="3" min="1" />
+                <input id="typeId" type="number" value="1" min="1" style="width: 90%;" />
               </div>
               <div>
                 <label>combination_id</label>
-                <input id="comboId" type="number" value="9" min="1" />
+                <input id="comboId" type="number" value="1" min="1" style="width: 90%;" />
               </div>
             </div>
 
             <div class="grid2">
               <div>
                 <label>from (YYYY-MM-DD)</label>
-                <input id="dateFrom" type="text" placeholder="2026-02-10" />
+                <input id="dateFrom" type="text" placeholder="2026-02-10" style="width: 90%;" />
               </div>
               <div>
                 <label>to (YYYY-MM-DD)</label>
-                <input id="dateTo" type="text" placeholder="2026-03-10" />
+                <input id="dateTo" type="text" placeholder="2026-03-10" style="width: 90%;" />
               </div>
             </div>
           </div>
@@ -117,11 +121,6 @@
           <div>
             <div class="h1" style="margin-top:8px;">Slot seleccionado</div>
             <pre id="selected">{}</pre>
-          </div>
-
-          <div>
-            <div class="h1" style="margin-top:8px;">Última respuesta data (resumen)</div>
-            <pre id="lastData">{}</pre>
           </div>
         </div>
       </div>
@@ -220,7 +219,6 @@
       // resumen de data
       const dayCount = (data?.days || []).length;
       const availDays = (data?.days || []).filter(d => (d.slots || []).length).length;
-      $("lastData").textContent = pretty({ dayCount, availDays, sampleDay: data?.days?.find(d => (d.slots||[]).length) || null });
     }
 
     function applyModeUI() {
@@ -233,7 +231,6 @@
 
     $("btnReset").addEventListener("click", () => {
       $("selected").textContent = "{}";
-      $("lastData").textContent = "{}";
       setStatus("Reset OK");
       mountCalendar({ days: [] });
     });
